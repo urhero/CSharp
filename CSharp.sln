@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MStar2DB", "MStar2DB\MStar2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BBG2DB", "BBG2DB\BBG2DB.csproj", "{A6554C0C-1BD5-46FE-AA74-A7B101680131}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BloombergConsole", "..\..\..\..\..\..\MOON\Visual Studio 2015\BloombergConsole\BloombergConsole\BloombergConsole.csproj", "{22682705-9BBA-4CB7-ADA9-9C8DFF83AFAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A6554C0C-1BD5-46FE-AA74-A7B101680131}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6554C0C-1BD5-46FE-AA74-A7B101680131}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6554C0C-1BD5-46FE-AA74-A7B101680131}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22682705-9BBA-4CB7-ADA9-9C8DFF83AFAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22682705-9BBA-4CB7-ADA9-9C8DFF83AFAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22682705-9BBA-4CB7-ADA9-9C8DFF83AFAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22682705-9BBA-4CB7-ADA9-9C8DFF83AFAB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

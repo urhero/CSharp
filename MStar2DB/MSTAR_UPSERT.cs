@@ -311,13 +311,6 @@ namespace MStar2DB
 
             sw.Stop();
             Console.ReadLine();
-
-
-
-
-
-
-
         }
     }
 }

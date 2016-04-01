@@ -1,0 +1,2 @@
+Server = 10.206.1.11; Database = API; User Id = sa; Password = sa;
+BLPAPI_RAW_TEMP

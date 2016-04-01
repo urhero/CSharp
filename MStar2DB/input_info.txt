@@ -1,0 +1,4 @@
+Server = 10.206.1.19; Database = GLOBAL; User Id = sa; Password = kbam1111*;
+FF_mstmsr
+FF_msstat
+M:\MOON_Inkyu\FUND_DATABASE\FF_Korea_Japan_China_HK_20160328_manaul_export.xlsx

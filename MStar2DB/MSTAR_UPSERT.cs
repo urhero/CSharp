@@ -8,6 +8,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Data.OleDb;
+using Excel;
 
 
 namespace MStar2DB
@@ -32,8 +33,7 @@ namespace MStar2DB
             }
             return list;
         }
-        /*
-        private static void showMatch(string text, string expr)                                                       //regex 정규식 string 만들때 디버깅용
+        /* private static void showMatch(string text, string expr)                                                       //regex 정규식 string 만들때 디버깅용
         {
             Console.WriteLine("The Expression: " + expr);
             MatchCollection mc = Regex.Matches(text, expr);
@@ -44,43 +44,48 @@ namespace MStar2DB
         }
         */
 
-        public static void SaveAsTxt(string xlsx_path)
+        public static void SaveAsTxt(string path)
         {
-            string strConn = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" +
-                            xlsx_path + ";Mode=ReadWrite|Share Deny None;Extended Properties='Excel 12.0; HDR={1}; IMEX={2}';Persist Security Info=False";
+            // OLEDB can only read 255 column!! therefore using ExcelDataReader open source
+            FileStream stream = File.Open(path, FileMode.Open, FileAccess.Read);
 
-            OleDbConnection conn = null;
-            StreamWriter wrtr = null;
-            OleDbCommand cmd = null;
-            OleDbDataAdapter da = null;
+            //string extension = Path.GetExtension(path);
+            IExcelDataReader excelReader;
+            if (path.EndsWith(".xls"))
+                excelReader = ExcelReaderFactory.CreateBinaryReader(stream);
+            else if (path.EndsWith(".xlsx"))
+                excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
+            else
+                throw new NotSupportedException("Wrong file extension");
 
-            conn = new OleDbConnection(strConn);
+            //if (excelContent.HasHeader)
+            //    excelReader.IsFirstRowAsColumnNames = true;
+            
+            DataSet result = excelReader.AsDataSet();
 
-
-            conn.Open();
-
-            cmd = new OleDbCommand("SELECT * FROM [" + "Sheet1" + "$]", conn);
-            cmd.CommandType = CommandType.Text;
-            wrtr = new StreamWriter(xlsx_path.Replace(".xlsx", ".txt"));
-
-            da = new OleDbDataAdapter(cmd);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-
-            for (int x = 0; x < dt.Rows.Count; x++)
+            //5. Data Reader methods
+            while (excelReader.Read())
             {
-                string rowString = "";
-                for (int y = 0; y < dt.Columns.Count; y++)
+                //excelReader.GetInt32(0);
+            }
+
+            DataTable dt = result.Tables[0];
+            DataRow dr;
+            StreamWriter wrtr = null;
+            wrtr = new StreamWriter(path.Replace(".xlsx", ".txt"));
+
+            for (int i = 0; i < dt.Columns.Count; i++)
+            {
+                string rowString = null;
+                dr = dt.Rows[i];
+                for (int j = 0; j < dr.Table.Columns.Count; j++)
                 {
-                    rowString += "\"" + dt.Rows[x][y].ToString() + "\"\t";
+                    rowString += "\"" + dr[j] + "\"\t";
                 }
                 wrtr.WriteLine(rowString);
             }
-
-            conn.Close();
-            conn.Dispose();
-            cmd.Dispose();
-            da.Dispose();
+            
+            excelReader.Close();
             wrtr.Close();
             wrtr.Dispose();
         }
@@ -143,7 +148,7 @@ namespace MStar2DB
             if (!File.Exists(input_info[3].Replace(".xlsx", ".txt")))
                 SaveAsTxt(input_info[3]);
 
-            List<string[]> lines = TextDivider(File.ReadAllText(input_info[3].Replace(".xlsx", ".txt")));
+            List<string[]> lines = TextDivider(File.ReadAllText(input_info[3].Replace(".xlsx", ".txt")).ToString());
 
 
 

@@ -97,6 +97,7 @@ namespace MStar2DB
 
             //showMatch(raw, @"(\t\""[^""]*?)\n(\(Cumulative\)\"")");                                                       //regex 정규식 string 만들때 디버깅용
             raw = Regex.Replace(raw, @"(\t\""[^""]*?)\n(\(Cumulative\)\"")", "$1$2");  //한 셀 안의 줄바꿈\n 제거
+            raw = Regex.Replace(raw, @"(\t\""[^""]*?)\n(\(Annualized\)\"")", "$1$2");  //한 셀 안의 줄바꿈\n 제거
 
             //showMatch(raw, @",|\""|\r");                                                                                  //regex 정규식 string 만들때 디버깅용
             raw = Regex.Replace(raw, @",|\""|\r", "");                             //, " 캐리지 리턴 제거
@@ -121,7 +122,7 @@ namespace MStar2DB
                     lines[header_row - 1][j] = string.Format("{0}-{1}-{2}", match.Groups[1].Value, match.Groups[2].Value, DateTime.DaysInMonth(Int32.Parse(match.Groups[1].Value), Int32.Parse(match.Groups[2].Value)).ToString());
                     lines[header_row][j] = Regex.Replace(lines[header_row][j], @"([0-9]{4})\-([0-9]{2})", "");
                 }
-                else if (lines[header_row][j] != "" && lines[header_row - 1][j - 1] != "")
+                else if (lines[header_row][j] != "" && lines[header_row - 1][j - 1] != "" && lines[header_row - 1][j] == "")
                     lines[header_row - 1][j] = lines[header_row - 1][j - 1];
             }
 
@@ -133,189 +134,189 @@ namespace MStar2DB
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            int ROW_H = -1;                                                                                              //Header 행
-            int COL_H = -1;                                                                                          //historical data가 시작되는 컬럼
-            string dir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+            string exedir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+            string dir = "M:\\MOON_Inkyu\\FUND_DATABASE\\";
 
-            //db 정보, input 파일 정보 수집
             string[] input_info = null;
-            input_info = Read_input(dir + "\\input_info.txt");
+            input_info = Read_input(exedir + "\\input_info.txt");
             //0: Connection String
             //1: historical(timeseries) data Table
             //2: Static data Table
             //3: input file path
 
-            if (!File.Exists(input_info[3].Replace(".xlsx", ".txt")))
-                SaveAsTxt(input_info[3]);
-
-            List<string[]> lines = TextDivider(File.ReadAllText(input_info[3].Replace(".xlsx", ".txt")).ToString());
-
-
-
-
-            SqlConnection con = new SqlConnection(input_info[0]);
-            con.Open();
-            SqlDataAdapter da_ts
-                = new SqlDataAdapter("Select * From " + input_info[1], con);
-            SqlDataAdapter da_st
-                = new SqlDataAdapter("Select * From " + input_info[2], con);
-            con.Close();
-
-            //컬럼과 컬럼 타입 정보 수집
-            DataSet db = new DataSet("GLOBAL");                                                                     //"GLOBAL" 향후 input파일 에서 연동 요망
-            da_ts.FillSchema(db, SchemaType.Source, input_info[1]);
-            da_st.FillSchema(db, SchemaType.Source, input_info[2]);                                                      //#CP# 가능?
-            ////da.Fill(dsAPI, DB_Table);
-
-            DataTable dt_ts; //data table_time series
-            dt_ts = db.Tables[input_info[1]];
-
-
-            DataTable dt_st; //data table_static
-            dt_st = db.Tables[input_info[2]];
-
-
-            //파싱을 통한 db행 생성
-            DataRow dr;
-
-
-            for (int i = 0; i < lines.Count; i++)
+            //db 정보, input 파일 정보 수집
+            foreach (string file in Directory.EnumerateFiles(dir + "\\files2Execute", "*.xlsx"))
             {
-                if (ROW_H != -1 && lines[i][0] != "" && lines[i][0] != "Unclassified" && lines[i][0] != "Number of investments ranked" && !Regex.Match(lines[i][0], @"(Benchmark [0-9]{1}\:)|(Peer Group)").Success)
+                int ROW_H = -1;                                                                                              //Header 행
+                int COL_H = -1;                                                                                          //historical data가 시작되는 컬럼
+
+                if (!File.Exists(file.Replace(".xlsx", ".txt")))
+                    SaveAsTxt(file);
+
+                List<string[]> lines = TextDivider(File.ReadAllText(file.Replace(".xlsx", ".txt")));
+
+                SqlConnection con = new SqlConnection(input_info[0]);
+                con.Open();
+                SqlDataAdapter da_ts
+                    = new SqlDataAdapter("Select * From " + input_info[1], con);
+                SqlDataAdapter da_st
+                    = new SqlDataAdapter("Select * From " + input_info[2], con);
+                con.Close();
+
+                //컬럼과 컬럼 타입 정보 수집
+                DataSet db = new DataSet("GLOBAL");                                                                     //"GLOBAL" 향후 input파일 에서 연동 요망
+                da_ts.FillSchema(db, SchemaType.Source, input_info[1]);
+                da_st.FillSchema(db, SchemaType.Source, input_info[2]);                                                      //#CP# 가능?
+                ////da.Fill(dsAPI, DB_Table);
+
+                DataTable dt_ts; //data table_time series
+                dt_ts = db.Tables[input_info[1]];
+
+
+                DataTable dt_st; //data table_static
+                dt_st = db.Tables[input_info[2]];
+
+
+                //파싱을 통한 db행 생성
+                DataRow dr;
+
+
+                for (int i = 0; i < lines.Count; i++)
                 {
-                    for (int j = 1; j < lines[i].Length; j++)
+                    if (ROW_H != -1 && lines[i][0] != "" && lines[i][0] != "Unclassified" && lines[i][0] != "Number of investments ranked" && !Regex.Match(lines[i][0], @"(Benchmark [0-9]{1}\:)|(Peer Group)").Success)
                     {
-
-                        if (j < COL_H && lines[i][j] != "" && lines[ROW_H - 1][j] == "")                                     //static data
+                        for (int j = 1; j < lines[i].Length; j++)
                         {
-                            dr = dt_st.NewRow();
-                            dr["id"] = lines[i][0];
-                            //dr["ddt"] = lines[ROW_H-1][j];
-                            dr["acct"] = lines[ROW_H][j];
-                            dr["val"] = lines[i][j];
-                            dt_st.Rows.Add(dr);
 
+                            if (j < COL_H && lines[i][j] != "" && lines[ROW_H - 1][j] == "")                                     //static data
+                            {
+                                dr = dt_st.NewRow();
+                                dr["id"] = lines[i][0];
+                                //dr["ddt"] = lines[ROW_H-1][j];
+                                dr["acct"] = lines[ROW_H][j];
+                                dr["val"] = lines[i][j];
+                                dt_st.Rows.Add(dr);
+
+                            }
+                            else if (j >= COL_H && lines[i][j] != "")                               //historical data
+                            {
+                                dr = dt_ts.NewRow();
+                                dr["id"] = lines[i][0];
+                                dr["ddt"] = lines[ROW_H - 1][j];
+                                dr["acct"] = lines[ROW_H][j];
+                                dr["val"] = lines[i][j];
+                                dt_ts.Rows.Add(dr);
+                            }
                         }
-                        else if (j >= COL_H && lines[i][j] != "")                               //historical data
+                    }
+
+                    if (ROW_H == -1 && lines[i][0] == "FundId")
+                    {
+                        ROW_H = i;
+                        for (int j = 1; j < lines[ROW_H - 1].Length; j++)
                         {
-                            dr = dt_ts.NewRow();
-                            dr["id"] = lines[i][0];
-                            dr["ddt"] = lines[ROW_H - 1][j];
-                            dr["acct"] = lines[ROW_H][j];
-                            dr["val"] = lines[i][j];
-                            dt_ts.Rows.Add(dr);
+                            if (COL_H == -1 && lines[ROW_H - 1][j] != "")
+                                COL_H = j;
                         }
                     }
                 }
 
-                if (ROW_H == -1 && lines[i][0] == "FundId")
-                {
-                    ROW_H = i;
-                    for (int j = 1; j < lines[ROW_H - 1].Length; j++)
-                    {
-                        if (COL_H == -1 && lines[ROW_H - 1][j] != "")
-                            COL_H = j;
-                    }
-                }
+                Console.WriteLine(sw.Elapsed + file + ": 파싱 완료");
+
+                //이하 UPSERT
+                //임시 테이블 CREATE
+                SqlCommand oSqlCommand = new SqlCommand("SELECT * INTO " + input_info[1] + "_temp FROM " + input_info[1] + " WHERE 0 = 1", con);
+                oSqlCommand.CommandType = CommandType.Text;
+                oSqlCommand.CommandTimeout = 0;
+                con.Open();
+                oSqlCommand.ExecuteNonQuery();
+                con.Close();
+
+                //임시 테이블에 db 업데이트
+                SqlBulkCopy bulkCopy = new SqlBulkCopy(input_info[0], SqlBulkCopyOptions.TableLock);
+
+                bulkCopy.DestinationTableName = "dbo." + input_info[1] + "_temp";
+                bulkCopy.WriteToServer(dt_ts);
+
+                //임시 테이블에서 오리지널로 UPSERT (기존 것들 val UPDATE & 기존에 없는 행 INSERT)
+                oSqlCommand.CommandText = "MERGE INTO [GLOBAL].[dbo].[" + input_info[1] + "] AS Target " +
+                                      "USING [GLOBAL].[dbo].[" + input_info[1] + "_temp] AS Source " +
+                                      "ON Target.ddt = Source.ddt " +
+                                      "AND Target.id = Source.id " +
+                                      "AND Target.acct = Source.acct " +
+                                      "WHEN MATCHED THEN " +
+                                      "UPDATE SET Target.val=Source.val " +
+                                      "WHEN NOT MATCHED THEN " +
+                                      "INSERT (";
+                foreach (DataColumn column in dt_ts.Columns)
+                    oSqlCommand.CommandText += column.ColumnName + ",";
+                oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
+                oSqlCommand.CommandText += ") VALUES (";
+                foreach (DataColumn column in dt_ts.Columns)
+                    oSqlCommand.CommandText += "Source." + column.ColumnName + ",";
+                oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
+                oSqlCommand.CommandText += ");";
+
+                con.Open();
+                oSqlCommand.ExecuteNonQuery();
+
+                //임시 테이블 제거
+                oSqlCommand.CommandText = "DROP TABLE " + input_info[1] + "_temp";
+                oSqlCommand.ExecuteNonQuery();
+                con.Close();
+
+                Console.WriteLine(sw.Elapsed + ": 임시 테이블 생성 완료");
+
+
+                //#CP#
+
+                //이하 UPSERT2
+                //임시 테이블 CREATE
+                oSqlCommand = new SqlCommand("SELECT * INTO " + input_info[2] + "_temp FROM " + input_info[2] + " WHERE 0 = 1", con);
+                oSqlCommand.CommandType = CommandType.Text;
+                oSqlCommand.CommandTimeout = 0;
+                con.Open();
+                oSqlCommand.ExecuteNonQuery();
+                con.Close();
+
+                //임시 테이블에 db 업데이트
+                bulkCopy = new SqlBulkCopy(input_info[0], SqlBulkCopyOptions.TableLock);
+
+                bulkCopy.DestinationTableName = "dbo." + input_info[2] + "_temp";
+                bulkCopy.WriteToServer(dt_st);
+
+                //임시 테이블에서 오리지널로 UPSERT (기존 것들 val UPDATE & 기존에 없는 행 INSERT)
+                oSqlCommand.CommandText = "MERGE INTO " + input_info[2] + " AS Target " +
+                                      "USING " + input_info[2] + "_temp AS Source " +
+                                      //"ON Target.ddt = Source.ddt " +
+                                      "ON Target.id = Source.id " +
+                                      "AND Target.acct = Source.acct " +
+                                      "WHEN MATCHED THEN " +
+                                      "UPDATE SET Target.val=Source.val " +
+                                      "WHEN NOT MATCHED THEN " +
+                                      "INSERT (";
+                foreach (DataColumn column in dt_st.Columns)
+                    oSqlCommand.CommandText += column.ColumnName + ",";
+                oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
+                oSqlCommand.CommandText += ") VALUES (";
+                foreach (DataColumn column in dt_st.Columns)
+                    oSqlCommand.CommandText += "Source." + column.ColumnName + ",";
+                oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
+                oSqlCommand.CommandText += ");";
+
+                con.Open();
+                oSqlCommand.ExecuteNonQuery();
+
+                //임시 테이블 제거
+                oSqlCommand.CommandText = "DROP TABLE " + input_info[2] + "_temp";
+                oSqlCommand.ExecuteNonQuery();
+                con.Close();
+
+                Console.WriteLine(sw.Elapsed + ": UPSERT 완료");
+
+
             }
-
-            Console.WriteLine(sw.Elapsed);
-
-            //이하 UPSERT
-            //임시 테이블 CREATE
-            SqlCommand oSqlCommand = new SqlCommand("SELECT * INTO " + input_info[1] + "_temp FROM " + input_info[1] + " WHERE 0 = 1", con);
-            oSqlCommand.CommandType = CommandType.Text;
-            oSqlCommand.CommandTimeout = 0;
-            con.Open();
-            oSqlCommand.ExecuteNonQuery();
-            con.Close();
-
-            //임시 테이블에 db 업데이트
-            SqlBulkCopy bulkCopy = new SqlBulkCopy(input_info[0], SqlBulkCopyOptions.TableLock);
-
-            bulkCopy.DestinationTableName = "dbo." + input_info[1] + "_temp";
-            bulkCopy.WriteToServer(dt_ts);
-
-            //임시 테이블에서 오리지널로 UPSERT (기존 것들 val UPDATE & 기존에 없는 행 INSERT)
-            oSqlCommand.CommandText = "MERGE INTO " + input_info[1] + " AS Target " +
-                                  "USING " + input_info[1] + "_temp AS Source " +
-                                  "ON Target.ddt = Source.ddt " +
-                                  "AND Target.id = Source.id " +
-                                  "AND Target.acct = Source.acct " +
-                                  "WHEN MATCHED THEN " +
-                                  "UPDATE SET Target.val=Source.val " +
-                                  "WHEN NOT MATCHED THEN " +
-                                  "INSERT (";
-            foreach (DataColumn column in dt_ts.Columns)
-                oSqlCommand.CommandText += column.ColumnName + ",";
-            oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
-            oSqlCommand.CommandText += ") VALUES (";
-            foreach (DataColumn column in dt_ts.Columns)
-                oSqlCommand.CommandText += "Source." + column.ColumnName + ",";
-            oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
-            oSqlCommand.CommandText += ");";
-
-            con.Open();
-            oSqlCommand.ExecuteNonQuery();
-
-            //임시 테이블 제거
-            oSqlCommand.CommandText = "DROP TABLE " + input_info[1] + "_temp";
-            oSqlCommand.ExecuteNonQuery();
-            con.Close();
-
-            Console.WriteLine(sw.Elapsed);
-
-
-            //#CP#
-
-            //이하 UPSERT2
-            //임시 테이블 CREATE
-            oSqlCommand = new SqlCommand("SELECT * INTO " + input_info[2] + "_temp FROM " + input_info[2] + " WHERE 0 = 1", con);
-            oSqlCommand.CommandType = CommandType.Text;
-            oSqlCommand.CommandTimeout = 0;
-            con.Open();
-            oSqlCommand.ExecuteNonQuery();
-            con.Close();
-
-            //임시 테이블에 db 업데이트
-            bulkCopy = new SqlBulkCopy(input_info[0], SqlBulkCopyOptions.TableLock);
-
-            bulkCopy.DestinationTableName = "dbo." + input_info[2] + "_temp";
-            bulkCopy.WriteToServer(dt_st);
-
-            //임시 테이블에서 오리지널로 UPSERT (기존 것들 val UPDATE & 기존에 없는 행 INSERT)
-            oSqlCommand.CommandText = "MERGE INTO " + input_info[2] + " AS Target " +
-                                  "USING " + input_info[2] + "_temp AS Source " +
-                                  //"ON Target.ddt = Source.ddt " +
-                                  "ON Target.id = Source.id " +
-                                  "AND Target.acct = Source.acct " +
-                                  "WHEN MATCHED THEN " +
-                                  "UPDATE SET Target.val=Source.val " +
-                                  "WHEN NOT MATCHED THEN " +
-                                  "INSERT (";
-            foreach (DataColumn column in dt_st.Columns)
-                oSqlCommand.CommandText += column.ColumnName + ",";
-            oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
-            oSqlCommand.CommandText += ") VALUES (";
-            foreach (DataColumn column in dt_st.Columns)
-                oSqlCommand.CommandText += "Source." + column.ColumnName + ",";
-            oSqlCommand.CommandText = oSqlCommand.CommandText.TrimEnd(new char[] { ',', '\n' });
-            oSqlCommand.CommandText += ");";
-
-            con.Open();
-            oSqlCommand.ExecuteNonQuery();
-
-            //임시 테이블 제거
-            oSqlCommand.CommandText = "DROP TABLE " + input_info[2] + "_temp";
-            oSqlCommand.ExecuteNonQuery();
-            con.Close();
-
-            Console.WriteLine(sw.Elapsed);
-
-
-
             sw.Stop();
-            Console.ReadLine();
         }
     }
 }
